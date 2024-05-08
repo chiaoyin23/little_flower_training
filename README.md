@@ -37,7 +37,9 @@ pip install requirent
 ```
 
 ### 5. 測試一下模型 ###
-舉例：
+執行看看目前模型的回答能力 
+
+Transformers 有些參數有更新，需要注意，可閱讀 [huggingface transformers 相關文檔](https://huggingface.co/docs/transformers/main/en/main_classes/quantization#transformers.BitsAndBytesConfig.llm_int8_enable_fp32_cpu_offload)
 ```
 import torch
 from transformers import LlamaTokenizer
@@ -72,6 +74,13 @@ with torch.no_grad():
     print(tokenizer.decode(model.generate(**model_input, max_new_tokens=100)[0], skip_special_tokens=True))
 
 ```
+
+得到結果：
+
+[INST] 今天天氣真好~ 
+
+[/INST] 是的，今天陽光明媚，是個大好日子！你今天有什麼計畫嗎？ 
+
 ### 6. 準備微調資料 ###
 參考說明：[recipes 中 finetuning 文檔](https://github.com/meta-llama/llama-recipes/blob/main/recipes/finetuning/datasets/README.md)
 + 到 llama-recipes/recipes/finetuning/datasets/custom_dataset.py 修改def get_custom_dataset(dataset_config, tokenizer, split: str) 的內容
