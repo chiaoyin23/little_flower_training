@@ -89,7 +89,7 @@ with torch.no_grad():
 
 
 ### 7. 進行微調 ###
-
+在終端機的 /dataset/little_flower/llama-recipes 執行
 ```
-python -m finetuning.py  --use_peft --peft_method lora --quantization --use_fp16 --model_name /content/little_flower/model/TAIDE-LX-7B-Chat --output_dir  /content/little_flower/model_train
+python -m llama_recipes.finetuning --dataset "custom_dataset" --custom_dataset.file /"dataset/little_flower/llama-recipes/recipes/finetuning/datasets/custom_dataset.py" --model_name "/dataset/little_flower/model/TAIDE-LX-7B-Chat" --output_dir "/dataset/little_flower/model_train"
 ```
