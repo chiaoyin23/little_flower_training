@@ -93,3 +93,7 @@ with torch.no_grad():
 ```
 python -m llama_recipes.finetuning --dataset "custom_dataset" --custom_dataset.file /"dataset/little_flower/llama-recipes/recipes/finetuning/datasets/custom_dataset.py" --model_name "/dataset/little_flower/model/TAIDE-LX-7B-Chat" --output_dir "/dataset/little_flower/model_train"
 ```
+
+```
+python -m llama_recipes.finetuning --use_peft --peft_method lora --quantization --dataset "custom_dataset" --custom_dataset.file /dataset/little_flower/llama-recipes/recipes/finetuning/datasets/custom_dataset.py --model_name /dataset/little_flower/model/TAIDE-LX-7B-Chat --output_dir /dataset/little_flower/model_train --save_metrics
+```
