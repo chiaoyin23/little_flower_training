@@ -1,50 +1,73 @@
+import copy
+import datasets
+import itertools
 import pandas as pd
-from transformers import AutoTokenizer
+import numpy as np
+from openpyxl import load_workbook
+from zipfile import ZipFile
 
-# 假设的tokenizer，实际使用时需要根据具体模型加载
-tokenizer = AutoTokenizer.from_pretrained('your-model-path')
+import os
+
+B_INST, E_INST = "[INST]", "[/INST]"
+file_path = '/dataset/little_flower/data/train.xlsx'
+
+
+def load_and_prepare_excel(shit):
+    # 傳入的shit用不到
+    print("file is")
+    print(file_path)
+    print(os.path.isfile(file_path))
+    data = pd.read_excel(file_path, engine='openpyxl')
+    threads = []
+    for index, row in data.iterrows():
+        thread = [{'content': row['Q'], 'role': 'user'}, {'content': row['A'], 'role': 'assistant'}]
+        threads.append(thread)
+    return threads
+
 
 def tokenize_dialog(dialog, tokenizer):
-    """根据对话内容生成输入和标签，处理特殊标记"""
-    dialog_tokens = [tokenizer.encode(f"[INST] {entry['content']} [/INST]" if entry['role'] == 'user' else f"{entry['content']}", add_special_tokens=False) for entry in dialog]
-    labels_tokens = [-100 if entry['role'] == 'user' else tokenizer.encode(entry['content'], add_special_tokens=False) for entry in dialog]
+    if tokenizer.vocab_size >= 128000:
+        dialog_tokens = tokenizer.apply_chat_template(dialog)
+        dialog_tokens = dialog_tokens[:-4]
+        eot_indices = [i for i, n in enumerate(dialog_tokens) if n == 128009]
+        labels = copy.copy(dialog_tokens)
+        last_idx = 0
+        for n, idx in enumerate(eot_indices):
+            if n % 2 == 1:
+                last_idx = idx
+            else:
+                labels[last_idx:idx + 1] = [-100] * (idx - last_idx + 1)
 
-    # Flatten the list of tokens
-    input_ids = [token for sublist in dialog_tokens for token in sublist]
-    labels = [label for sublist in labels_tokens for label in sublist]
+        dialog_tokens = [dialog_tokens]
+        labels_tokens = [labels]
+    else:
+        prompt_tokens = [tokenizer.encode(f"{tokenizer.bos_token}{B_INST} {str(prompt['content']).strip()} {E_INST}",
+                                          add_special_tokens=False) for prompt in dialog[::2]]
+        answer_tokens = [
+            tokenizer.encode(f"{str(answer['content']).strip()} {tokenizer.eos_token}", add_special_tokens=False) for
+            answer in dialog[1::2]]
+        dialog_tokens = list(itertools.chain.from_iterable(zip(prompt_tokens, answer_tokens)))
+        labels_tokens = [len(c) * [-100, ] if i % 2 == 0 else c for i, c in enumerate(dialog_tokens)]
 
-    return {
-        "input_ids": input_ids,
-        "labels": labels,
-        "attention_mask": [1] * len(input_ids)
+    combined_tokens = {
+        "input_ids": list(itertools.chain(*(t for t in dialog_tokens))),
+        "labels": list(itertools.chain(*(t for t in labels_tokens))),
     }
 
-def process_excel_file(file_path):
-    """從Excel取資料"""
-    data = pd.read_excel(file_path)
-    dialogs = []
-
-    for index, row in data.iterrows():
-        dialog = [
-            {"role": "user", "content": row["Q"]},
-            {"role": "assistant", "content": row["A"]}
-        ]
-        dialogs.append(dialog)
-
-    return dialogs
-
-def main(file_path, tokenizer):
-    """執行數據加載、轉化與tokenize過程"""
-    dialogs = process_excel_file(file_path)
-    tokenized_data = []
-
-    for dialog in dialogs:
-        tokenized_result = tokenize_dialog(dialog, tokenizer)
-        tokenized_data.append(tokenized_result)
+    return dict(combined_tokens, attention_mask=[1] * len(combined_tokens["input_ids"]))
 
 
-    print(tokenized_data)
+def get_custom_dataset(dataset_config, tokenizer, split):
+    threads = load_and_prepare_excel(dataset_config.file)
+    all_dialogs = []
+    for thread in threads:
+        dialog_data = tokenize_dialog(thread, tokenizer)
+        all_dialogs.append(dialog_data)
 
+    dataset = datasets.Dataset.from_dict({
+        "input_ids": [d['input_ids'] for d in all_dialogs],
+        "labels": [d['labels'] for d in all_dialogs],
+        "attention_mask": [d['attention_mask'] for d in all_dialogs]
+    })
 
-if __name__ == "__main__":
-    main('/path/to/your/excel.xlsx', tokenizer)
+    return dataset
