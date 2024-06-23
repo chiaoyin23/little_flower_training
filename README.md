@@ -90,10 +90,12 @@ with torch.no_grad():
 
 ### 7. 進行微調 ###
 在終端機的 /dataset/little_flower/llama-recipes 執行
+
+以下只會取得 6 % 參數
 ```
 python -m llama_recipes.finetuning --dataset "custom_dataset" --custom_dataset.file /"dataset/little_flower/llama-recipes/recipes/finetuning/datasets/custom_dataset.py" --model_name "/dataset/little_flower/model/TAIDE-LX-7B-Chat" --output_dir "/dataset/little_flower/model_train"
 ```
-
+需加上 peft_method 的使用
 ```
 python -m llama_recipes.finetuning --use_peft --peft_method lora --quantization --dataset "custom_dataset" --custom_dataset.file /dataset/little_flower/llama-recipes/recipes/finetuning/datasets/custom_dataset.py --model_name /dataset/little_flower/model/TAIDE-LX-7B-Chat --output_dir /dataset/little_flower/model_train --save_metrics
 ```
